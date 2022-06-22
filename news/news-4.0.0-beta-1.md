@@ -60,7 +60,7 @@ Maintainer highlights include:
 
 ### BitTorrent 2.0 File Support
 
-- Transmission 4.0.0 now supports .torrent files that were created with the [BitTorrent v2 spec](http://bittorrent.org/beps/bep_0052.html). 4.0.0 users will be able to download and seed torrents created by both BitTorrent v1 and v2. Support for _creating_ v2 torrents is slated forr the next major release of Transmission.
+- Transmission 4.0.0 now supports .torrent files that were created with the [BitTorrent v2 spec](http://bittorrent.org/beps/bep_0052.html). 4.0.0 users will be able to download and seed torrents created by both BitTorrent v1 and v2. Support for _creating_ v2 torrents is slated for the next major release of Transmission.
 
 ### New Features
 
