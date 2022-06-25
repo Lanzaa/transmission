@@ -699,6 +699,8 @@ public:
 
     evbuffer* const outMessages; /* all the non-piece messages */
 
+    tr_peerIo* const io;
+
     struct QueuedPeerRequest : public peer_request
     {
         explicit QueuedPeerRequest(peer_request in) noexcept
@@ -731,8 +733,6 @@ public:
     std::optional<size_t> reqq;
 
     UniqueTimer pex_timer;
-
-    tr_peerIo* io = nullptr;
 
     tr_bitfield have_;
 

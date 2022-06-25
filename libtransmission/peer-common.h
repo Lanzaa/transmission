@@ -91,9 +91,6 @@ public:
        NOTE: private to peer-mgr.c */
     bool doPurge = false;
 
-    /* number of bad pieces they've contributed to */
-    uint8_t strikes = 0;
-
     tr_session* const session;
 
     tr_swarm* const swarm;
