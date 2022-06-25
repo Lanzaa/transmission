@@ -308,7 +308,7 @@ public:
         return Bps > 0;
     }
 
-    [[nodiscard]] size_t pendingReqCount(tr_direction dir) const noexcept override
+    [[nodiscard]] size_t activeReqCount(tr_direction dir) const noexcept override
     {
         switch (dir)
         {

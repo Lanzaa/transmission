@@ -85,7 +85,7 @@ public:
     [[nodiscard]] virtual Bandwidth* bandwidth() noexcept = 0;
 
     // requests that have been made but haven't been fulfilled yet
-    [[nodiscard]] virtual size_t pendingReqCount(tr_direction) const noexcept = 0;
+    [[nodiscard]] virtual size_t activeReqCount(tr_direction) const noexcept = 0;
 
     /* whether or not we should free this peer soon.
        NOTE: private to peer-mgr.c */

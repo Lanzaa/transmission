@@ -557,7 +557,7 @@ struct tr_peerMgr final : public BlockRequestAllocator<tr_peer*, Bandwidth*>::Me
         return peers;
     }
 
-    [[nodiscard]] size_t pendingReqCount(PeerKey peer) const override
+    [[nodiscard]] size_t activeReqCount(PeerKey peer) const override
     {
         return peer->swarm->active_requests.count(peer);
     }
@@ -1725,8 +1725,8 @@ namespace peer_stat_helpers
     stats.cancelsToPeer = peer->cancels_sent_to_peer.count(now, CancelHistorySec);
     stats.cancelsToClient = peer->cancels_sent_to_client.count(now, CancelHistorySec);
 
-    stats.pendingReqsToPeer = peer->pendingReqCount(TR_CLIENT_TO_PEER);
-    stats.pendingReqsToClient = peer->pendingReqCount(TR_PEER_TO_CLIENT);
+    stats.activeReqsToPeer = peer->activeReqCount(TR_CLIENT_TO_PEER);
+    stats.activeReqsToClient = peer->activeReqCount(TR_PEER_TO_CLIENT);
 
     char* pch = stats.flagStr;
 
