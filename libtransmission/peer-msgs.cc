@@ -348,6 +348,11 @@ public:
         return io->isIncoming();
     }
 
+    [[nodiscard]] Bandwidth* bandwidth() noexcept override
+    {
+        return io->bandwidth;
+    }
+
     [[nodiscard]] bool is_active(tr_direction direction) const override
     {
         TR_ASSERT(tr_isDirection(direction));
