@@ -26,6 +26,7 @@
 
 class tr_peer;
 class tr_swarm;
+struct Bandwidth;
 struct peer_atom;
 
 /**
@@ -80,6 +81,18 @@ public:
     [[nodiscard]] virtual std::string readable() const = 0;
 
     [[nodiscard]] virtual bool hasPiece(tr_piece_index_t piece) const noexcept = 0;
+
+    [[nodiscard]] virtual Bandwidth* bandwidth() noexcept = 0;
+
+    // requests that have been made but haven't been fulfilled yet
+    [[nodiscard]] virtual size_t pendingReqCount(tr_direction) const noexcept = 0;
+
+    /* whether or not we should free this peer soon.
+       NOTE: private to peer-mgr.c */
+    bool doPurge = false;
+
+    /* number of bad pieces they've contributed to */
+    uint8_t strikes = 0;
 
     tr_session* const session;
 

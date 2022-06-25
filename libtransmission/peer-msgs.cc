@@ -308,9 +308,20 @@ public:
         return Bps > 0;
     }
 
-    [[nodiscard]] size_t pendingReqsToClient() const noexcept override
+    [[nodiscard]] size_t pendingReqCount(tr_direction dir) const noexcept override
     {
-        return std::size(peer_requested_);
+        switch (dir)
+        {
+        case TR_CLIENT_TO_PEER: // requests we sent
+            return tr_peerMgrCountActiveRequestsToPeer(torrent, this);
+
+        case TR_PEER_TO_CLIENT: // requests they sent
+            return std::size(peer_requested_);
+
+        default:
+            TR_ASSERT(0);
+            return {};
+        }
     }
 
     [[nodiscard]] bool is_peer_choked() const noexcept override

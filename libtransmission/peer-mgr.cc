@@ -493,7 +493,7 @@ struct EventDeleter
 
 using UniqueTimer = std::unique_ptr<struct event, EventDeleter>;
 
-struct tr_peerMgr final : public BlockRequestAllocator<tr_peerMsgs*, Bandwidth*>::Mediator
+struct tr_peerMgr final : public BlockRequestAllocator<tr_peer*, Bandwidth*>::Mediator
 {
     explicit tr_peerMgr(tr_session* session_in)
         : session{ session_in }
@@ -530,7 +530,7 @@ struct tr_peerMgr final : public BlockRequestAllocator<tr_peerMsgs*, Bandwidth*>
 
     /// BlockRequestAllocator::Mediator
 
-    using PeerKey = tr_peerMsgs*;
+    using PeerKey = tr_peer*;
     using PoolKey = Bandwidth*;
 
     [[nodiscard]] std::vector<PeerKey> peers() const override
@@ -546,6 +546,11 @@ struct tr_peerMgr final : public BlockRequestAllocator<tr_peerMsgs*, Bandwidth*>
                 {
                     peers.push_back(peer);
                 }
+            }
+
+            for (auto& peer : torrent->swarm->webseeds)
+            {
+                peers.push_back(peer.get());
             }
         }
 
@@ -1720,8 +1725,8 @@ namespace peer_stat_helpers
     stats.cancelsToPeer = peer->cancels_sent_to_peer.count(now, CancelHistorySec);
     stats.cancelsToClient = peer->cancels_sent_to_client.count(now, CancelHistorySec);
 
-    stats.pendingReqsToPeer = peer->swarm->active_requests.count(peer);
-    stats.pendingReqsToClient = peer->pendingReqsToClient();
+    stats.pendingReqsToPeer = peer->pendingReqCount(TR_CLIENT_TO_PEER);
+    stats.pendingReqsToClient = peer->pendingReqCount(TR_PEER_TO_CLIENT);
 
     char* pch = stats.flagStr;
 
