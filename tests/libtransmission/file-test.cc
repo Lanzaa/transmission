@@ -1003,7 +1003,7 @@ TEST_F(FileTest, pathRemove)
     tr_sys_path_remove(path2);
 }
 
-TEST_F(FileTest, pathNativeSeparators)
+TEST_F(FileTest, DISABLED_pathNativeSeparators)
 {
     EXPECT_EQ(nullptr, tr_sys_path_native_separators(nullptr));
 
