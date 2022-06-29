@@ -14,6 +14,7 @@
 #include <fmt/core.h>
 #include <fmt/format.h>
 
+#include "merkle.h"
 #include "transmission.h"
 
 #include "benc.h"
@@ -176,6 +177,7 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
     tr_pathbuf file_subpath_;
     std::string_view pieces_root_;
     int64_t file_length_ = 0;
+    std::vector<piece_layer_entry> piece_layers_ = {};
 
     enum class State
     {
@@ -245,6 +247,9 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
             // v2, ignore for today
             tr_logAddInfo("'file tree' is ignored");
             state_ = State::UsePath;
+        }
+        else if (state_ == State::PieceLayers)  // bittorent v2 format
+        {
         }
         else if (state_ == State::Files) // bittorrent v1 format
         {
@@ -334,8 +339,13 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         }
         else if (pathIs(InfoKey, MetaVersionKey))
         {
-            // currently unused. TODO support for bittorrent v2
-            // TODO https://github.com/transmission/transmission/issues/458
+            // meta version introduced for v2 bittorrent files
+            if (value > 2)
+            {
+                // TODO need to error/bail out due to unsupported new torrent format
+                tr_logAddError(fmt::format("Unknown bittorrent file version: {}.", value));
+            }
+            tr_logAddWarn(fmt::format("Found a v{} bittorrent file.", value));
             tm_.is_v2_ = value == 2;
         }
         else if (
@@ -420,6 +430,24 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
             else
             {
                 unhandled = true;
+            }
+        }
+        else if (state_ == State::PieceLayers)
+        {
+            auto x = parsePieceLayersEntry(currentKey(), value);
+            if (!x)
+            {
+                // Failed to parse
+                // set an error or something
+                // maybe skip and try to fall back to v1 metadata
+                tr_logAddError("Unable to parse 'piece layers'");
+            }
+            else
+            {
+                auto kd = x.value().first;
+                auto vals = x.value().second;
+                // Cannot validate yet because the piece length is probably unknown
+                piece_layers_.push_back({ kd, vals });
             }
         }
         else if (pathIs(CommentKey) || pathIs(CommentUtf8Key))
@@ -624,6 +652,50 @@ private:
         }
 
         tm_.block_info_.initSizes(tm_.files_.totalSize(), piece_size_);
+
+        // bittorrent 2 spec
+        // http://bittorrent.org/beps/bep_0052.html
+        if (tm_.is_v2_)
+        {
+            if (piece_layers_.empty())
+            {
+                if (!tr_error_is_set(context.error))
+                {
+                    tr_error_set(context.error, EINVAL, fmt::format("invalid torrent file, v2 must contain piece layers"));
+                }
+                return false;
+            }
+            // Stricter validation for piece_size_ (should be from 'piece length')
+            std::optional<uint> layer_number = calculateLayerNumber(piece_size_);
+            if (!layer_number)
+            {
+                if (!tr_error_is_set(context.error))
+                {
+                    // piece_size_ for v2 must be a power of two
+                    tr_error_set(context.error, EINVAL, fmt::format("invalid piece size: {}", piece_size_));
+                }
+                return false;
+            }
+
+            // validate and load each entry in piece_layers_
+            for (auto const& entry : piece_layers_)
+            {
+                auto key = entry.first;
+                auto values = entry.second;
+                merkle_layer ml = { layer_number.value(), values };
+                if (!validatePieceLayers(key, ml))
+                {
+                    if (!tr_error_is_set(context.error))
+                    {
+                        // Probably a corrupt torrent file, I can't think of another reason this would fail.
+                        tr_error_set(context.error, EINVAL, fmt::format("invalid torrent file v2, piece layers hash mismatch"));
+                    }
+                    return false;
+                }
+                // load into tm_
+            }
+            // Validate match each file to en entry in piece layers
+        }
         return true;
     }
 

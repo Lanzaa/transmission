@@ -4,6 +4,7 @@
 // License text can be found in the licenses/ folder.
 
 #include <algorithm>
+#include <cassert>
 #include <cerrno>
 #include <cstdint>
 #include <cstring> /* strcmp, strlen */
