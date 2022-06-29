@@ -34,6 +34,7 @@ set(PROJECT_FILES
   log.cc
   magnet-metainfo.cc
   makemeta.cc
+  merkle.cpp
   natpmp.cc
   net.cc
   open-files.cc
@@ -137,6 +138,7 @@ set(${PROJECT_NAME}_PUBLIC_HEADERS
     file.h
     log.h
     makemeta.h
+    merkle.h
     quark.h
     rpcimpl.h
     session-id.h

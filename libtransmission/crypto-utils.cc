@@ -259,3 +259,15 @@ std::optional<tr_sha256_digest_t> tr_sha256_from_string(std::string_view hex)
     tr_hex_to_binary(std::data(hex), std::data(digest), std::size(digest));
     return digest;
 }
+
+std::optional<tr_sha256_digest_t> tr_sha256_from_raw(std::string_view raw)
+{
+    if (raw.size() != TR_SHA256_DIGEST_LEN)
+    {
+        return {};
+    }
+    tr_sha256_digest_t digest = {};
+
+    std::copy_n(std::data(raw), std::size(digest), reinterpret_cast<char*>(std::data(digest)));
+    return digest;
+}

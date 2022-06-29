@@ -6,7 +6,9 @@
 #pragma once
 
 #include <cstdint> // uint32_t, uint64_t
+#include <optional>
 
+#include "merkle.h"
 #include "transmission.h"
 
 struct tr_metainfo_builder_file

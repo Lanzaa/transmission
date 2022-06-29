@@ -240,6 +240,11 @@ std::string tr_sha256_to_string(tr_sha256_digest_t const&);
  */
 std::optional<tr_sha256_digest_t> tr_sha256_from_string(std::string_view hex);
 
+/**
+ * @brief tr_sha256_from_raw Generate a sha256 digest from a string of bytes
+ */
+std::optional<tr_sha256_digest_t> tr_sha256_from_raw(std::string_view raw);
+
 /** @} */
 
 #endif /* TR_CRYPTO_UTILS_H */
