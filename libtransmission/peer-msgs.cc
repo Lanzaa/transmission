@@ -76,6 +76,11 @@ auto constexpr FextAllowedFast = uint8_t{ 17 };
 // see also LtepMessageIds below
 auto constexpr Ltep = uint8_t{ 20 };
 
+// http://bittorrent.org/beps/bep_0052.html
+auto constexpr HashRequest = uint8_t{ 21 };
+auto constexpr Hashes = uint8_t{ 22 };
+auto constexpr HashReject = uint8_t{ 23 };
+
 } // namespace BtPeerMsgs
 
 namespace LtepMessages
@@ -1576,6 +1581,11 @@ static bool messageLengthIsCorrect(tr_peerMsgsImpl const* msg, uint8_t id, uint3
 
         return true;
 
+        /*
+    case BtPeerMsgs::HashRequst:
+    case BtPeerMsgs::Hashes:
+    case BtPeerMsgs::HashReject:
+        */
     case BtPeerMsgs::Request:
     case BtPeerMsgs::Cancel:
     case BtPeerMsgs::FextReject:
@@ -1930,6 +1940,18 @@ static ReadState readBtMessage(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, si
     case BtPeerMsgs::Ltep:
         logtrace(msgs, "Got a BtPeerMsgs::Ltep");
         parseLtep(msgs, msglen, inbuf);
+        break;
+
+    case BtPeerMsgs::HashRequest:
+        logtrace(msgs, "Got a BtPeerMsgs::HashRequest");
+        break;
+
+    case BtPeerMsgs::Hashes:
+        logtrace(msgs, "Got a BtPeerMsgs::Hashes");
+        break;
+
+    case BtPeerMsgs::HashReject:
+        logtrace(msgs, "Got a BtPeerMsgs::HashReject");
         break;
 
     default:
