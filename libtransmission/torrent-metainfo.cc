@@ -250,6 +250,11 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         }
         else if (state_ == State::PieceLayers)  // bittorent v2 format
         {
+            // TODO handle piece layers validation
+            // TODO match piece layers against files
+            // TODO handle adding piece layers to tm_ somehow
+            tr_logAddWarn(fmt::format("Found piece layers for {} files", piece_layers_.size()));
+            tr_logAddError(fmt::format("Not currently finishing {}", PieceLayersKey));
         }
         else if (state_ == State::Files) // bittorrent v1 format
         {
@@ -273,8 +278,13 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         if (pathIs(InfoKey, FilesKey))
         {
             state_ = std::empty(tm_.files_) ? State::Files : State::FilesIgnored;
+            tr_logAddWarn(fmt::format("Starting files parse, state: {}", state_ == State::Files ? "files" : "filesIgnored"));
             file_subpath_.clear();
             file_length_ = 0;
+        }
+        else if (state_ == State::PieceLayers)
+        {
+            tr_logAddWarn("State PieceLayers... StartArray");
         }
 
         return BasicHandler::StartArray(context);
@@ -394,6 +404,7 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
             {
                 // currently unused. TODO support for bittorrent v2
                 // TODO https://github.com/transmission/transmission/issues/458
+                tr_logAddWarn("found 'file tree stuff'... probably 'pieces root'");
             }
             else
             {
@@ -446,6 +457,7 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
             {
                 auto kd = x.value().first;
                 auto vals = x.value().second;
+                tr_logAddWarn(fmt::format("Found piece layer: root {} -> ... of len {}", tr_sha256_to_string(kd), vals.size()));
                 // Cannot validate yet because the piece length is probably unknown
                 piece_layers_.push_back({ kd, vals });
             }
@@ -493,6 +505,7 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         {
             // currently unused. TODO support for bittorrent v2
             // TODO https://github.com/transmission/transmission/issues/458
+            tr_logAddWarn("Found piece layers path, not state??");
         }
         else if (pathStartsWith(AnnounceListKey))
         {
@@ -558,6 +571,8 @@ private:
     {
         bool ok = true;
 
+
+        tr_logAddWarn(fmt::format("Maybe add file: {}, len {}", file_subpath_, file_length_));
         if (file_length_ == 0)
         {
             return ok;
@@ -572,6 +587,7 @@ private:
         }
         else
         {
+            tr_logAddWarn(fmt::format("Found file: {}", file_subpath_));
             tm_.files_.add(file_subpath_, file_length_);
         }
 
@@ -692,9 +708,15 @@ private:
                     }
                     return false;
                 }
-                // load into tm_
+
+                // TODO load into tm_
             }
+
+            tr_logAddWarn("Validated piece layers consistency");
+
             // Validate match each file to en entry in piece layers
+            // TODO
+
         }
         return true;
     }

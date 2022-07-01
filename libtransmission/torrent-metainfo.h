@@ -7,6 +7,7 @@
 
 #include <cstdint> // uint32_t, uint64_t
 #include <ctime>
+#include <map>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -225,6 +226,7 @@ private:
     tr_torrent_files files_;
 
     std::vector<tr_sha1_digest_t> pieces_;
+    std::map<tr_sha256_digest_t, std::vector<tr_sha256_digest_t>> piece_layers_;
 
     std::string comment_;
     std::string creator_;

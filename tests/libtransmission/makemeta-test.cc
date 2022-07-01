@@ -364,11 +364,11 @@ TEST_F(MakemetaTest, singleDirectoryRandomPayload)
 
 TEST(MerkleBasics, basicTreeHashing)
 {
-    // TODO hash a few bytes
-    // TODO hash a full block
+    // X hash a few bytes
+    // X hash a full block
 
     // Leaf hashes (L0) can be full, partial, or empty.
-    // TODO L0 hashes, data sizes: 0, 0 < x < 16 KiB, and = 16 KiB
+    // X L0 hashes, data sizes: 0, 0 < x < 16 KiB, and = 16 KiB
     // L1 hashes. combine a two L0 of any type.
     // L2 hashes. Combine two L1
 
@@ -377,21 +377,21 @@ TEST(MerkleBasics, basicTreeHashing)
 
 TEST(BasicV2Meta, createFileTreeEntries)
 {
-    // TODO create a "file tree" type entry for a single file
+    // X create a "file tree" type entry for a single file
     // need to encode length and "pieces root"
     // {"": {length: ..., pieces root: ...}}
 
     // Leaf hashes (L0) can be full, partial, or empty.
-    // TODO L0 hashes, data sizes: 0, 0 < x < 16 KiB, and = 16 KiB
+    // X L0 hashes, data sizes: 0, 0 < x < 16 KiB, and = 16 KiB
     // L1 hashes. combine a two L0 of any type.
     // L2 hashes. Combine two L1
 
-    // TODO L1 hashes, a full L0 * each of the three L0 types
-    // TODO empty file
-    // TODO small file, < 16 KiB
-    // TODO small file, == 16 KiB
-    // TODO medium file, > 16 KiB, < 32 KiB
-    // TODO large file, > 32 KiB
+    // X L1 hashes, a full L0 * each of the three L0 types
+    // X empty file
+    // X small file, < 16 KiB
+    // X small file, == 16 KiB
+    // X medium file, > 16 KiB, < 32 KiB
+    // X large file, > 32 KiB
 
     EXPECT_EQ(1, 0); // Not impl
 }
