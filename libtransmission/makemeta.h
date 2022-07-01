@@ -36,7 +36,7 @@ struct tr_tracker_info
 struct tr_metainfo_builder
 {
     /**
-    ***  These are set by tr_makeMetaInfoBuilderCreate()
+    ***  These are set by tr_metaInfoBuilderCreate()
     ***  and cleaned up by tr_metaInfoBuilderFree()
     **/
 
@@ -63,6 +63,7 @@ struct tr_metainfo_builder
     char* comment;
     char* outputFile;
     bool isPrivate;
+    bool includeV2Meta;
     char* source;
 
     /**
@@ -122,6 +123,34 @@ void tr_metaInfoBuilderFree(tr_metainfo_builder*);
  * @param trackerCount size of the `trackers' array
  */
 void tr_makeMetaInfo(
+    tr_metainfo_builder* builder,
+    char const* output_file,
+    tr_tracker_info const* trackers,
+    int n_trackers,
+    char const** webseeds,
+    int n_webseeds,
+    char const* comment,
+    bool is_private,
+    char const* source);
+
+/**
+ * @brief create a new hybrid v1+v2 torrent file
+ *
+ * This is actually done in a worker thread, not the main thread!
+ * Otherwise the client's interface would lock up while this runs.
+ *
+ * It is the caller's responsibility to poll builder->isDone
+ * from time to time!  When the worker thread sets that flag,
+ * the caller must pass the builder to tr_metaInfoBuilderFree().
+ *
+ * @param outputFile if nullptr, builder->top + ".torrent" will be used.
+
+ * @param trackers An array of trackers, sorted by tier from first to last.
+ *                 NOTE: only the `tier' and `announce' fields are used.
+ *
+ * @param trackerCount size of the `trackers' array
+ */
+void tr_makeMetaInfoHybrid(
     tr_metainfo_builder* builder,
     char const* output_file,
     tr_tracker_info const* trackers,

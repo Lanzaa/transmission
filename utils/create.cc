@@ -35,7 +35,7 @@ char constexpr Usage[] = "Usage: transmission-create [options] <file|directory>"
 
 uint32_t constexpr KiB = 1024;
 
-auto constexpr Options = std::array<tr_option, 9>{
+auto constexpr Options = std::array<tr_option, 10>{
     { { 'p', "private", "Allow this torrent to only be used with the specified tracker(s)", "p", false, nullptr },
       { 'r', "source", "Set the source for private trackers", "r", true, "<source>" },
       { 'o', "outfile", "Save the generated .torrent to this filename", "o", true, "<file>" },
@@ -43,6 +43,7 @@ auto constexpr Options = std::array<tr_option, 9>{
       { 'c', "comment", "Add a comment", "c", true, "<comment>" },
       { 't', "tracker", "Add a tracker's announce URL", "t", true, "<url>" },
       { 'w', "webseed", "Add a webseed URL", "w", true, "<url>" },
+      { '2', "v2-meta", "Include bittorrent v2 metadata in the generated torrent", "2", false, nullptr },
       { 'V', "version", "Show version number and exit", "V", false, nullptr },
       { 0, nullptr, nullptr, nullptr, false, nullptr } }
 };
@@ -58,6 +59,7 @@ struct app_options
     uint32_t piecesize_kib = 0;
     bool is_private = false;
     bool show_version = false;
+    bool include_v2 = false;
 };
 
 int parseCommandLine(app_options& options, int argc, char const* const* argv)
@@ -91,6 +93,10 @@ int parseCommandLine(app_options& options, int argc, char const* const* argv)
 
         case 'w':
             options.webseeds.push_back(optarg);
+            break;
+
+        case '2':
+            options.include_v2 = true;
             break;
 
         case 's':
@@ -146,7 +152,7 @@ int tr_main(int argc, char* argv[])
 {
     tr_metainfo_builder* b = nullptr;
 
-    tr_logSetLevel(TR_LOG_ERROR);
+    tr_logSetLevel(TR_LOG_WARN);
     tr_formatter_mem_init(MemK, MemKStr, MemMStr, MemGStr, MemTStr);
     tr_formatter_size_init(DiskK, DiskKStr, DiskMStr, DiskGStr, DiskTStr);
     tr_formatter_speed_init(SpeedK, SpeedKStr, SpeedMStr, SpeedGStr, SpeedTStr);
@@ -233,6 +239,8 @@ int tr_main(int argc, char* argv[])
         tr_formatter_size_B(b->pieceSize).c_str());
 
     tr_makeMetaInfo(
+
+    tr_makeMetaInfoHybrid(
         b,
         options.outfile.c_str(),
         std::data(options.trackers),

@@ -354,6 +354,19 @@ static std::vector<std::byte> getHashInfo(tr_metainfo_builder* b)
     return ret;
 }
 
+/**
+ * ??? dunno, just thinking in code
+ *
+ * probably need to return the 'file tree'
+ * @brief getHash2Info
+ * @param b
+ * @return
+ */
+static std::vector<std::byte> getHash2Info(tr_metainfo_builder* b)
+{
+    return {};
+}
+
 static void getFileInfo(
     char const* topFile,
     tr_metainfo_builder_file const* file,
@@ -416,6 +429,16 @@ static void makeInfoDict(tr_variant* dict, tr_metainfo_builder* builder)
     if (auto const piece_hashes = getHashInfo(builder); !std::empty(piece_hashes))
     {
         tr_variantDictAddRaw(dict, TR_KEY_pieces, std::data(piece_hashes), std::size(piece_hashes));
+    }
+
+    // TODO 'file tree'
+    if (false) // btv2
+    {
+        tr_variantDictAddInt(dict, TR_KEY_meta_version, 2);
+        if (auto const file_tree = getHash2Info(builder); !std::empty(file_tree))
+        {
+            tr_variantDictAddRaw(dict, TR_KEY_file_tree, std::data(file_tree), std::size(file_tree));
+        }
     }
 
     if (builder->isPrivate)
@@ -505,6 +528,9 @@ static void tr_realMakeMetaInfo(tr_metainfo_builder* builder)
         tr_variantDictAddStrView(&top, TR_KEY_created_by, TR_NAME "/" LONG_VERSION_STRING);
         tr_variantDictAddInt(&top, TR_KEY_creation_date, time(nullptr));
         tr_variantDictAddStrView(&top, TR_KEY_encoding, "UTF-8");
+
+        // info dict creation needs to be changed.
+        // For hybrid torrents we need the old info dict info + {meta version: 2, file tree: ...}
         makeInfoDict(tr_variantDictAddDict(&top, TR_KEY_info, 666), builder);
     }
 
@@ -569,6 +595,30 @@ static void makeMetaWorkerFunc()
     worker_thread_id.reset();
 }
 
+void tr_makeMetaInfoHybrid(
+    tr_metainfo_builder* builder,
+    char const* outputFile,
+    tr_tracker_info const* trackers,
+    int trackerCount,
+    char const** webseeds,
+    int webseedCount,
+    char const* comment,
+    bool isPrivate,
+    char const* source)
+{
+    builder->includeV2Meta = true;
+    return tr_makeMetaInfo(
+                builder,
+                outputFile,
+                trackers,
+                trackerCount,
+                webseeds,
+                webseedCount,
+                comment,
+                isPrivate,
+                source);
+}
+
 void tr_makeMetaInfo(
     tr_metainfo_builder* builder,
     char const* outputFile,
@@ -614,6 +664,7 @@ void tr_makeMetaInfo(
 
     builder->comment = tr_strdup(comment);
     builder->isPrivate = isPrivate;
+//    builder->includeV2Meta = ...;
     builder->source = tr_strdup(source);
 
     builder->outputFile = !tr_str_is_empty(outputFile) ? tr_strdup(outputFile) :
