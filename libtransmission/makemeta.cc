@@ -353,14 +353,8 @@ static std::vector<std::byte> getHashInfo(tr_metainfo_builder* b)
     return ret;
 }
 
-static void getFileInfo(
-    char const* topFile,
-    tr_metainfo_builder_file const* file,
-    tr_variant* uninitialized_length,
-    tr_variant* uninitialized_path)
+static void getFileInfo(char const* topFile, tr_metainfo_builder_file const* file, tr_variant* uninitialized_path)
 {
-    /* get the file size */
-    tr_variantInitInt(uninitialized_length, file->size);
 
     /* how much of file->filename to walk past */
     size_t offset = strlen(topFile);
@@ -386,18 +380,45 @@ static void getFileInfo(
 
 static void makeInfoDict(tr_variant* dict, tr_metainfo_builder* builder)
 {
+    auto pieceSize = builder->pieceSize;
     tr_variantDictReserve(dict, 5);
 
     if (builder->isFolder) /* root node is a directory */
     {
-        tr_variant* list = tr_variantDictAddList(dict, TR_KEY_files, builder->fileCount);
+        // bep 47 padding files, reserve more space for padding files on top of fileCount
+        uint32_t padFileCount = 0;
+        static bool const PAD_FILES = true;
+        if (PAD_FILES) // flag for padFileGeneration
+        {
+            for (uint32_t i = 0; i < builder->fileCount; ++i)
+            {
+                if ((builder->files[i].size) % pieceSize > 0)
+                {
+                    padFileCount += 1;
+                }
+            }
+        }
+        tr_variant* list = tr_variantDictAddList(dict, TR_KEY_files, builder->fileCount + padFileCount);
 
         for (uint32_t i = 0; i < builder->fileCount; ++i)
         {
+            auto file = builder->files[i];
             tr_variant* d = tr_variantListAddDict(list, 2);
-            tr_variant* length = tr_variantDictAdd(d, TR_KEY_length);
+            tr_variant* x = tr_variantDictAddInt(d, TR_KEY_length, file.size);
             tr_variant* pathVal = tr_variantDictAdd(d, TR_KEY_path);
-            getFileInfo(builder->top, &builder->files[i], length, pathVal);
+            // figure out the path and put into dict
+            getFileInfo(builder->top, &file, pathVal);
+
+            auto rem = file.size % pieceSize > 0;
+            if (PAD_FILES && rem)
+            {
+                tr_variant* pd = tr_variantListAddDict(list, 3);
+                tr_variant* attr = tr_variantDictAddStr(pd, TR_KEY_attr, "hp"); // h - hidden,  p - padding file
+                tr_variant* x = tr_variantDictAddInt(pd, TR_KEY_length, rem);
+                tr_variant* pathList = tr_variantDictAddList(pd, TR_KEY_path, 2);
+                tr_variantListAddStr(pathList, ".pad");
+                tr_variantListAddStr(pathList, fmt::format("{}", rem));
+            }
         }
     }
     else
