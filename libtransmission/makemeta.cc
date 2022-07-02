@@ -254,6 +254,7 @@ void tr_metaInfoBuilderFree(tr_metainfo_builder* builder)
 
 static std::vector<std::byte> getHashInfo(tr_metainfo_builder* b)
 {
+    tr_logAddWarn("Attempting to generate hashes for torrent");
     auto ret = std::vector<std::byte>(std::size(tr_sha1_digest_t{}) * b->pieceCount);
 
     if (b->totalSize == 0)
@@ -385,19 +386,25 @@ static void makeInfoDict(tr_variant* dict, tr_metainfo_builder* builder)
 
     if (builder->isFolder) /* root node is a directory */
     {
-        // bep 47 padding files, reserve more space for padding files on top of fileCount
+        // TODO bep 47 padding files, probably reserve more space for padding files on top of fileCount
+
         uint32_t padFileCount = 0;
-        static bool const PAD_FILES = true;
+        static bool const PAD_FILES = true; // pad file must be used for hybrid torrents due to alignment w/ piece size
         if (PAD_FILES) // flag for padFileGeneration
         {
-            for (uint32_t i = 0; i < builder->fileCount; ++i)
+            // fileCount - 1, last file doesn't need padding afterwards
+            for (uint32_t i = 0; i < builder->fileCount - 1; ++i)
             {
                 if ((builder->files[i].size) % pieceSize > 0)
                 {
                     padFileCount += 1;
                 }
             }
+            // this probably breaks hash generation...
+            builder->pieceCount += padFileCount;
         }
+
+        tr_logAddWarn(fmt::format("Adding {} pad files", padFileCount));
         tr_variant* list = tr_variantDictAddList(dict, TR_KEY_files, builder->fileCount + padFileCount);
 
         for (uint32_t i = 0; i < builder->fileCount; ++i)
@@ -409,15 +416,16 @@ static void makeInfoDict(tr_variant* dict, tr_metainfo_builder* builder)
             // figure out the path and put into dict
             getFileInfo(builder->top, &file, pathVal);
 
-            auto rem = file.size % pieceSize > 0;
-            if (PAD_FILES && rem)
+            auto rem = file.size % pieceSize;
+            if (PAD_FILES && rem > 0 && i < builder->fileCount - 1) // TODO fix this uglyness..
             {
+                auto padSize = pieceSize - rem;
                 tr_variant* pd = tr_variantListAddDict(list, 3);
                 tr_variant* attr = tr_variantDictAddStr(pd, TR_KEY_attr, "hp"); // h - hidden,  p - padding file
-                tr_variant* x = tr_variantDictAddInt(pd, TR_KEY_length, rem);
+                tr_variant* x = tr_variantDictAddInt(pd, TR_KEY_length, padSize);
                 tr_variant* pathList = tr_variantDictAddList(pd, TR_KEY_path, 2);
                 tr_variantListAddStr(pathList, ".pad");
-                tr_variantListAddStr(pathList, fmt::format("{}", rem));
+                tr_variantListAddStr(pathList, fmt::format("{}", padSize));
             }
         }
     }
