@@ -186,6 +186,16 @@ static peer_request blockToReq(tr_torrent const* tor, tr_block_index_t block)
     return peer_request{ loc.piece, loc.piece_offset, tor->blockSize(block) };
 }
 
+struct peer_hash_msg
+{
+    tr_sha256_digest_t pieces_root = {};
+    uint32_t base_layer = 0;
+    uint32_t index = 0;
+    uint32_t length = 0;
+    uint32_t proof_layers = 0;
+    std::vector<tr_sha256_digest_t> hashes = {}; // size == 0 if there are no hashes
+};
+
 /**
 ***
 **/
@@ -1234,6 +1244,21 @@ static void sendLtepHandshake(tr_peerMsgsImpl* msgs)
     tr_variantFree(&val);
 }
 
+static void parseHashMsg(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, peer_hash_msg* hash_msg, uint32_t msg_len = 48)
+{
+    peer_hash_msg hm = *hash_msg;
+    tr_peerIoReadBytes(msgs->io, inbuf, std::data(hm.pieces_root), std::size(hm.pieces_root));
+    tr_peerIoReadUint32(msgs->io, inbuf, &hm.base_layer);
+    tr_peerIoReadUint32(msgs->io, inbuf, &hm.index);
+    tr_peerIoReadUint32(msgs->io, inbuf, &hm.length);
+    tr_peerIoReadUint32(msgs->io, inbuf, &hm.proof_layers);
+    if (msg_len > 48)
+    {
+        //
+    }
+    return;
+}
+
 static void parseLtepHandshake(tr_peerMsgsImpl* msgs, uint32_t len, struct evbuffer* inbuf)
 {
     msgs->peerSentLtepHandshake = true;
@@ -2010,16 +2035,38 @@ static ReadState readBtMessage(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, si
         break;
 
     case BtPeerMsgs::HashRequest:
-        logtrace(msgs, "Got a BtPeerMsgs::HashRequest");
-        break;
+        {
+            logtrace(msgs, "Got a BtPeerMsgs::HashRequest");
+            peer_hash_msg hash_msg = {};
+            parseHashMsg(msgs, inbuf, &hash_msg);
+            break;
+        }
 
     case BtPeerMsgs::Hashes:
-        logtrace(msgs, "Got a BtPeerMsgs::Hashes");
-        break;
+        {
+            logtrace(msgs, "Got a BtPeerMsgs::Hashes");
+            peer_hash_msg hash_msg = {};
+            parseHashMsg(msgs, inbuf, &hash_msg);
+            // TODO read hashes
+            uint32_t unread = msglen - 48;
+
+            if (unread % TR_SHA256_DIGEST_LEN != 0 || unread == 0)
+            {
+                    msgs->publishError(EMSGSIZE);
+            }
+            uint32_t hash_count = unread / TR_SHA256_DIGEST_LEN;
+            hash_msg.hashes.reserve(hash_count);
+            tr_peerIoReadBytes(msgs->io, inbuf, std::data(hash_msg.hashes), unread);
+            break;
+        }
 
     case BtPeerMsgs::HashReject:
-        logtrace(msgs, "Got a BtPeerMsgs::HashReject");
-        break;
+        {
+            logtrace(msgs, "Got a BtPeerMsgs::HashReject");
+            peer_hash_msg hash_msg = {};
+            parseHashMsg(msgs, inbuf, &hash_msg);
+            break;
+        }
 
     default:
         logtrace(msgs, fmt::format(FMT_STRING("peer sent us an UNKNOWN: {:d}"), static_cast<int>(id)));
