@@ -1244,7 +1244,8 @@ static void sendLtepHandshake(tr_peerMsgsImpl* msgs)
     tr_variantFree(&val);
 }
 
-static void parseHashMsg(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, peer_hash_msg* hash_msg, uint32_t msg_len = 48)
+constexpr uint32_t HASH_MSG_LEN = 48; // (TR_SHA256_DIGEST_LEN + 4*4)
+static void parseHashMsg(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, peer_hash_msg* hash_msg, uint32_t msg_len = HASH_MSG_LEN)
 {
     peer_hash_msg hm = *hash_msg;
     tr_peerIoReadBytes(msgs->io, inbuf, std::data(hm.pieces_root), std::size(hm.pieces_root));
@@ -1252,9 +1253,19 @@ static void parseHashMsg(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, peer_has
     tr_peerIoReadUint32(msgs->io, inbuf, &hm.index);
     tr_peerIoReadUint32(msgs->io, inbuf, &hm.length);
     tr_peerIoReadUint32(msgs->io, inbuf, &hm.proof_layers);
-    if (msg_len > 48)
+    if (msg_len > HASH_MSG_LEN)
     {
-        //
+        // there are hashes to grab
+        uint32_t unread = msg_len - HASH_MSG_LEN;
+        if (unread % TR_SHA256_DIGEST_LEN != 0)
+        {
+            tr_logAddError("oh no"); // TODO better error message
+            msgs->publishError(EMSGSIZE);
+            return;
+        }
+        auto hash_count = unread / TR_SHA256_DIGEST_LEN;
+        hm.hashes.reserve(hash_count);
+        tr_peerIoReadBytes(msgs->io, inbuf, std::data(hm.hashes), unread);
     }
     return;
 }
@@ -1673,11 +1684,16 @@ static bool messageLengthIsCorrect(tr_peerMsgsImpl const* msg, uint8_t id, uint3
 
         return true;
 
-        /*
-    case BtPeerMsgs::HashRequst:
-    case BtPeerMsgs::Hashes:
+    case BtPeerMsgs::HashRequest:
     case BtPeerMsgs::HashReject:
-        */
+         // (1 + TR_SHA256_DIGEST_LEN + 4*4) pieces root, base layer, index, length, proof layer count
+        return len == 1 + HASH_MSG_LEN;
+
+    case BtPeerMsgs::Hashes:
+        // not sure how many hashes are expected, it is at least as big as HashRequest
+        // HashRequest + hashes
+        return len > 1 + HASH_MSG_LEN;
+
     case BtPeerMsgs::Request:
     case BtPeerMsgs::Cancel:
     case BtPeerMsgs::FextReject:
@@ -2046,17 +2062,11 @@ static ReadState readBtMessage(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, si
         {
             logtrace(msgs, "Got a BtPeerMsgs::Hashes");
             peer_hash_msg hash_msg = {};
-            parseHashMsg(msgs, inbuf, &hash_msg);
+            parseHashMsg(msgs, inbuf, &hash_msg, msglen);
             // TODO read hashes
             uint32_t unread = msglen - 48;
 
-            if (unread % TR_SHA256_DIGEST_LEN != 0 || unread == 0)
-            {
-                    msgs->publishError(EMSGSIZE);
-            }
-            uint32_t hash_count = unread / TR_SHA256_DIGEST_LEN;
-            hash_msg.hashes.reserve(hash_count);
-            tr_peerIoReadBytes(msgs->io, inbuf, std::data(hash_msg.hashes), unread);
+
             break;
         }
 
