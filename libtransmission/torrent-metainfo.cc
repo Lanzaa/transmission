@@ -248,14 +248,6 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
             tr_logAddInfo("'file tree' is ignored");
             state_ = State::UsePath;
         }
-        else if (state_ == State::PieceLayers)  // bittorent v2 format
-        {
-            // TODO handle piece layers validation
-            // TODO match piece layers against files
-            // TODO handle adding piece layers to tm_ somehow
-            tr_logAddWarn(fmt::format("Found piece layers for {} files", piece_layers_.size()));
-            tr_logAddError(fmt::format("Not currently finishing {}", PieceLayersKey));
-        }
         else if (state_ == State::Files) // bittorrent v1 format
         {
             if (!addFile(context))
@@ -267,7 +259,12 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         }
         else if (state_ == State::PieceLayers)
         {
-            state_ = State::UsePath;
+            // TODO handle piece layers validation
+            // TODO match piece layers against files
+            // TODO handle adding piece layers to tm_ somehow
+            tr_logAddWarn(fmt::format("Found piece layers for {} files", piece_layers_.size()));
+            tr_logAddError(fmt::format("Not currently finishing {}", PieceLayersKey));
+            state_ = State::UsePath; // state_ should probably be a stack so we could pop
         }
 
         return depth() > 0;
@@ -397,9 +394,11 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         if (state_ == State::FilesIgnored)
         {
             // no-op
+            tr_logAddError(fmt::format("ignore Handling string: {} \"\"", current_key, value));
         }
         else if (state_ == State::FileTree)
         {
+            tr_logAddError(fmt::format("file tree Handling string: {} \"\"", current_key, value));
             if (current_key == AttrKey || current_key == PiecesRootKey)
             {
                 // currently unused. TODO support for bittorrent v2
@@ -413,6 +412,7 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         }
         else if (state_ == State::Files)
         {
+            tr_logAddError(fmt::format("files Handling string: {} \"\"", current_key, value));
             if (curdepth > 1 && key(curdepth - 1) == PathKey)
             {
                 if (!std::empty(file_subpath_))
@@ -492,6 +492,7 @@ struct MetainfoHandler final : public transmission::benc::BasicHandler<MaxBencDe
         }
         else if (pathIs(InfoKey, NameKey) || pathIs(InfoKey, NameUtf8Key))
         {
+            tr_logAddError(fmt::format("name Handling string: {} \"\"", current_key, value));
             tr_strvUtf8Clean(value, tm_.name_);
         }
         else if (pathIs(InfoKey, PiecesKey))
@@ -644,6 +645,7 @@ private:
         // "If length is present then the download represents a single file,
         // otherwise it represents a set of files which go in a directory structure.
         // In the single file case, length maps to the length of the file in bytes.
+        tr_logAddError(fmt::format("POIX length: {}, fileCount: {}, name: {}", length_, tm_.fileCount(), tm_.name_));
         if (tm_.fileCount() == 0 && length_ != 0 && !std::empty(tm_.name_))
         {
             tm_.files_.add(tm_.name_, length_);
