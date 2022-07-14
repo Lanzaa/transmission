@@ -2063,10 +2063,6 @@ static ReadState readBtMessage(tr_peerMsgsImpl* msgs, struct evbuffer* inbuf, si
             logtrace(msgs, "Got a BtPeerMsgs::Hashes");
             peer_hash_msg hash_msg = {};
             parseHashMsg(msgs, inbuf, &hash_msg, msglen);
-            // TODO read hashes
-            uint32_t unread = msglen - 48;
-
-
             break;
         }
 

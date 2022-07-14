@@ -626,6 +626,7 @@ public:
     // it means that piece needs to be checked before its data is used.
     tr_bitfield checked_pieces_ = tr_bitfield{ 0 };
 
+    // for hidden files, should we be looking here?
     tr_file_piece_map fpm_ = tr_file_piece_map{ metainfo_ };
     tr_file_priorities file_priorities_{ &fpm_ };
     tr_files_wanted files_wanted_{ &fpm_ };
